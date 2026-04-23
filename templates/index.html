@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataset Collector — AI Image Labeling Tool</title>
+    <meta name="description" content="Professional webcam dataset collection tool with auto-labeling and Google Drive upload.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header id="app-header">
+        <div class="header-left">
+            <div class="logo-icon">📸</div>
+            <div>
+                <h1>Dataset Collector</h1>
+                <p class="subtitle">AI Image Labeling Tool</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-badge" id="drive-status">
+                <span class="status-dot offline"></span>
+                <span class="status-text">Drive Offline</span>
+            </div>
+            <button class="btn-icon" id="btn-settings" title="Settings">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="app-main">
+        <!-- Camera Section -->
+        <section class="card camera-section" id="camera-section">
+            <div class="card-header">
+                <h2>📹 Live Camera</h2>
+                <span class="badge" id="next-id-badge">Next: #000001</span>
+            </div>
+            <div class="video-container" id="video-container">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="capture-canvas" style="display:none;"></canvas>
+                <div class="video-overlay" id="video-overlay">
+                    <p>Klik tombol di bawah untuk memulai kamera</p>
+                    <button class="btn btn-primary btn-lg" id="btn-start-camera">🎥 Mulai Kamera</button>
+                </div>
+            </div>
+            <div class="camera-controls">
+                <button class="btn btn-capture btn-xl" id="btn-capture" disabled>
+                    <span class="capture-ring"></span>
+                    📸 Ambil Gambar
+                </button>
+            </div>
+        </section>
+
+        <!-- Preview & Label Section -->
+        <section class="card preview-section" id="preview-section" style="display:none;">
+            <div class="card-header">
+                <h2>🏷️ Preview & Label</h2>
+                <button class="btn btn-ghost btn-sm" id="btn-retake">↩️ Ambil Ulang</button>
+            </div>
+            <div class="preview-container">
+                <img id="preview-image" alt="Captured image preview">
+            </div>
+            <div class="label-section">
+                <label for="label-select" class="form-label">Pilih Label:</label>
+                <div class="label-grid" id="label-grid"></div>
+                <div class="add-label-row">
+                    <input type="text" id="new-label-input" placeholder="Tambah label baru..." class="form-input">
+                    <button class="btn btn-outline btn-sm" id="btn-add-label">+ Tambah</button>
+                </div>
+            </div>
+            <button class="btn btn-success btn-xl" id="btn-upload" disabled>
+                ☁️ Simpan & Upload
+            </button>
+        </section>
+
+        <!-- Status / Feedback -->
+        <div class="toast-container" id="toast-container"></div>
+
+        <!-- History Panel -->
+        <section class="card history-section" id="history-section">
+            <div class="card-header">
+                <h2>📋 Riwayat Upload</h2>
+                <span class="badge badge-count" id="total-count">0 gambar</span>
+            </div>
+            <div class="history-list" id="history-list">
+                <div class="empty-state">
+                    <p>Belum ada gambar yang diupload</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal" style="display:none;">
+        <div class="modal" id="settings-modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Settings</h2>
+                <button class="btn-icon btn-close" id="btn-close-settings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Google Drive Auth -->
+                <div class="setting-group">
+                    <h3>☁️ Google Drive Authorization</h3>
+                    <p class="setting-desc" id="auth-status-text">Status: Belum terhubung</p>
+                    <div class="btn-row" style="margin-bottom:16px;">
+                        <a href="/auth/google" class="btn btn-primary" id="btn-login-drive">🔑 Login Google Drive</a>
+                        <button class="btn btn-outline" id="btn-logout-drive" style="display:none;">🚪 Logout</button>
+                        <button class="btn btn-outline" id="btn-test-drive">🔌 Test Koneksi</button>
+                    </div>
+                </div>
+
+                <!-- Config -->
+                <div class="setting-group">
+                    <h3>📁 Konfigurasi Folder</h3>
+                    <div class="form-group">
+                        <label class="form-label">Dataset Folder Name</label>
+                        <input type="text" id="cfg-dataset-name" class="form-input" placeholder="Dataset">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Parent Folder ID <span class="hint">(dari URL Google Drive)</span></label>
+                        <input type="text" id="cfg-parent-folder" class="form-input" placeholder="1abc123...">
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="cfg-drive-enabled" class="toggle-input">
+                            <span class="toggle-switch"></span>
+                            <span>Enable Google Drive Upload</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- OAuth Client Secret -->
+                <div class="setting-group">
+                    <h3>🔐 OAuth Client Secret (opsional)</h3>
+                    <p class="setting-desc">Paste isi file OAuth Client Secret JSON jika belum ada <code>client_secret.json</code> di folder app.</p>
+                    <div class="form-group">
+                        <textarea id="cfg-client-secret" class="form-textarea" rows="4" placeholder='Paste isi OAuth client_secret.json di sini...'></textarea>
+                    </div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="btn-save-config">💾 Simpan Konfigurasi</button>
+                </div>
+
+                <!-- Guide -->
+                <div class="setting-group" style="margin-top:24px;">
+                    <h3>📖 Panduan Setup</h3>
+                    <ol class="guide-list">
+                        <li>Buka <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                        <li>Enable <strong>Google Drive API</strong></li>
+                        <li>Buat <strong>OAuth 2.0 Client ID</strong> (type: Web Application)</li>
+                        <li>Tambahkan redirect URI: <code>http://localhost:5001/auth/callback</code></li>
+                        <li>Download <strong>Client Secret JSON</strong></li>
+                        <li>Copy file ke folder app sebagai <code>client_secret.json</code>, atau paste isinya di field di atas</li>
+                        <li>Klik <strong>"Login Google Drive"</strong> → authorize di browser</li>
+                        <li>Buat folder di Google Drive → copy <strong>Folder ID</strong> dari URL</li>
+                        <li>Paste Folder ID di field "Parent Folder ID" → Simpan</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Mengupload gambar...</p>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

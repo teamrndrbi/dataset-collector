@@ -1,0 +1,23 @@
+# Credentials & tokens (RAHASIA - jangan upload!)
+client_secret.json
+credentials.json
+token.json
+
+# User data
+config.json
+counter.txt
+temp_uploads/
+
+# Build output
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# macOS
+.DS_Store

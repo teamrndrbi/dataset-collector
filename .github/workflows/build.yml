@@ -1,0 +1,49 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Bisa trigger manual dari GitHub
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            artifact: DatasetCollector-Windows
+          - os: macos-latest
+            name: macOS
+            artifact: DatasetCollector-macOS
+
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Prepare client secret
+        run: cp client_secret.template.json client_secret.json
+
+      - name: Build app
+        run: |
+          pyinstaller --name DatasetCollector --noconfirm --clean --add-data "templates${{ runner.os == 'Windows' && ';' || ':' }}templates" --add-data "static${{ runner.os == 'Windows' && ';' || ':' }}static" --add-data "client_secret.template.json${{ runner.os == 'Windows' && ';' || ':' }}." --hidden-import google.auth.transport.requests --hidden-import google_auth_oauthlib --hidden-import google_auth_oauthlib.flow --hidden-import googleapiclient.discovery --hidden-import googleapiclient._helpers --hidden-import google.oauth2.credentials --collect-all google.auth --collect-all google_auth_oauthlib --collect-all googleapiclient launcher.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/DatasetCollector/
+          compression-level: 9
